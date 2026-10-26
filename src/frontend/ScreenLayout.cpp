@@ -129,7 +129,9 @@ void ScreenLayout::Setup(int screenWidth, int screenHeight,
     bool swapScreens,
     float topAspect, float botAspect)
 {
-    HybEnable = screenLayout == 3;
+    HybEnable = screenLayout == screenLayout_Hybrid;
+    bool overlayLayout = screenLayout == screenLayout_Overlay;
+    bool overlayEnable = overlayLayout && swapScreens;
     if (HybEnable)
     {
         screenLayout = screenLayout_Natural;
@@ -138,6 +140,17 @@ void ScreenLayout::Setup(int screenWidth, int screenHeight,
         swapScreens = false;
         topAspect = botAspect = 1;
         HybPrevTouchScreen = 0;
+    }
+    else if (overlayLayout)
+    {
+        screenLayout = screenLayout_Natural;
+        if (overlayEnable)
+        {
+            sizing = screenSizing_TopOnly;
+            screenGap = 0;
+            botAspect = topAspect;
+            swapScreens = false;
+        }
     }
 
     float refpoints[6][2] =
@@ -198,11 +211,13 @@ void ScreenLayout::Setup(int screenWidth, int screenHeight,
         if (integerScale)
             scale = floorf(scale);
 
-        TopEnable = sizing == screenSizing_TopOnly;
-        BotEnable = sizing == screenSizing_BotOnly;
+        TopEnable = sizing == screenSizing_TopOnly || overlayEnable;
+        BotEnable = sizing == screenSizing_BotOnly || overlayEnable;
         botScale = scale;
 
         M23_Scale(mtx, scale);
+        if (overlayEnable)
+            M23_Scale(BotScreenMtx, scale);
         refpoints[primOffset][0] *= scale;
         refpoints[primOffset][1] *= scale;
         refpoints[primOffset+1][0] *= scale;
@@ -221,8 +236,10 @@ void ScreenLayout::Setup(int screenWidth, int screenHeight,
 
             bool moveV = rotation % 2 == layout;
 
-            float offsetBot = (moveV ? 192.0 : 256.0 * botAspect) / 2.0 + screenGap / 2.0;
-            float offsetTop = -((moveV ? 192.0 : 256.0 * topAspect) / 2.0 + screenGap / 2.0);
+            float offsetBot = overlayEnable ? 0
+                : (moveV ? 192.0 : 256.0 * botAspect) / 2.0 + screenGap / 2.0;
+            float offsetTop = overlayEnable ? 0
+                : -((moveV ? 192.0 : 256.0 * topAspect) / 2.0 + screenGap / 2.0);
 
             if ((rotation == 1 || rotation == 2) ^ swapScreens)
             {

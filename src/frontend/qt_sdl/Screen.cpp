@@ -816,12 +816,33 @@ void ScreenPanelNative::paintEvent(QPaintEvent* event)
         }
         bufferLock.unlock();
 
+        bool overlay = screenLayout == screenLayout_Overlay && numScreens == 2;
+        QImage overlayTop;
+        if (overlay)
+        {
+            overlayTop = screen[0].copy();
+            for (int y = 0; y < overlayTop.height(); y++)
+            {
+                QRgb* pixels = reinterpret_cast<QRgb*>(overlayTop.scanLine(y));
+                for (int x = 0; x < overlayTop.width(); x++)
+                {
+                    int gray = qGray(pixels[x]) * 55 / 100;
+                    pixels[x] = qRgb(gray, gray, gray);
+                }
+            }
+        }
+
         QRect screenrc(0, 0, 256, 192);
 
         for (int i = 0; i < numScreens; i++)
         {
+            if (overlay && screenKind[i] == 1)
+                painter.setOpacity(0.75);
             painter.setTransform(screenTrans[i]);
-            painter.drawImage(screenrc, screen[screenKind[i]]);
+            painter.drawImage(screenrc, overlay && screenKind[i] == 0
+                ? overlayTop : screen[screenKind[i]]);
+            if (overlay && screenKind[i] == 1)
+                painter.setOpacity(1.0);
         }
         emuInstance->renderLock.unlock();
     }
@@ -935,6 +956,8 @@ void ScreenPanelGL::initOpenGL()
 
     screenShaderScreenSizeULoc = glGetUniformLocation(screenShaderProgram, "uScreenSize");
     screenShaderTransformULoc = glGetUniformLocation(screenShaderProgram, "uTransform");
+    screenShaderOverlayULoc = glGetUniformLocation(screenShaderProgram, "uOverlayMode");
+    screenShaderKindULoc = glGetUniformLocation(screenShaderProgram, "uScreenKind");
 
     const float vertices[] =
     {
@@ -1164,8 +1187,18 @@ void ScreenPanelGL::drawScreen()
 
         for (int i = 0; i < numScreens; i++)
         {
+            bool overlay = screenLayout == screenLayout_Overlay && numScreens == 2;
+            glUniform1i(screenShaderOverlayULoc, overlay);
+            glUniform1i(screenShaderKindULoc, screenKind[i]);
+            if (overlay && screenKind[i] == 1)
+            {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            }
             glUniformMatrix2x3fv(screenShaderTransformULoc, 1, GL_TRUE, screenMatrix[i]);
             glDrawArrays(GL_TRIANGLES, screenKind[i] == 0 ? 0 : 2 * 3, 2 * 3);
+            if (overlay && screenKind[i] == 1)
+                glDisable(GL_BLEND);
         }
 
         screenSettingsLock.unlock();

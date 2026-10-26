@@ -48,6 +48,8 @@ void main()
 const char* kScreenFS = R"(#version 140
 
 uniform sampler2DArray ScreenTex;
+uniform int uOverlayMode;
+uniform int uScreenKind;
 
 smooth in vec3 fTexcoord;
 
@@ -57,7 +59,22 @@ void main()
 {
     vec4 pixel = texture(ScreenTex, fTexcoord);
 
-    oColor = vec4(pixel.rgb, 1.0);
+    if (uOverlayMode != 0)
+    {
+        if (uScreenKind == 0)
+        {
+            float gray = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
+            oColor = vec4(vec3(gray * 0.55), 1.0);
+        }
+        else
+        {
+            oColor = vec4(pixel.rgb, 0.75);
+        }
+    }
+    else
+    {
+        oColor = vec4(pixel.rgb, 1.0);
+    }
 }
 )";
 

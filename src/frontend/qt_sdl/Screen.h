@@ -223,6 +223,7 @@ private:
     GLuint screenTexture;
     GLuint screenShaderProgram;
     GLint screenShaderTransformULoc, screenShaderScreenSizeULoc;
+    GLint screenShaderOverlayULoc, screenShaderKindULoc;
 
     QMutex screenSettingsLock;
     WindowInfo windowInfo;
@@ -244,4 +245,3 @@ private:
 };
 
 #endif // SCREEN_H
-

@@ -486,7 +486,7 @@ MainWindow::MainWindow(int id, EmuInstance* inst, QWidget* parent) :
                 QMenu * submenu = menu->addMenu("Screen layout");
                 grpScreenLayout = new QActionGroup(submenu);
 
-                const char *screenlayout[] = {"Natural", "Vertical", "Horizontal", "Hybrid"};
+                const char *screenlayout[] = {"Natural", "Vertical", "Horizontal", "Hybrid", "Overlay"};
 
                 for (int i = 0; i < screenLayout_MAX; i++)
                 {
@@ -2039,16 +2039,18 @@ void MainWindow::onChangeScreenSwap(bool checked)
 {
     windowCfg.SetBool("ScreenSwap", checked);
 
-    // Swap between top and bottom screen when displaying one screen.
+    // In overlay layout, swapping screens enables the bottom-screen overlay.
     int sizing = windowCfg.GetInt("ScreenSizing");
-    if (sizing == screenSizing_TopOnly)
+    if (windowCfg.GetInt("ScreenLayout") != screenLayout_Overlay
+        && sizing == screenSizing_TopOnly)
     {
         // Bottom Screen.
         sizing = screenSizing_BotOnly;
         actScreenSizing[screenSizing_TopOnly]->setChecked(false);
         actScreenSizing[sizing]->setChecked(true);
     }
-    else if (sizing == screenSizing_BotOnly)
+    else if (windowCfg.GetInt("ScreenLayout") != screenLayout_Overlay
+        && sizing == screenSizing_BotOnly)
     {
         // Top Screen.
         sizing = screenSizing_TopOnly;
